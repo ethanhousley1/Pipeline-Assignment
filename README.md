@@ -16,3 +16,10 @@ MacOS:
 ```
 brew install supabase/tap/supabase
 ```
+
+### Run Local
+
+```
+bun db:up
+bun dev
+```
