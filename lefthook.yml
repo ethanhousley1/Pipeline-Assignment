@@ -1,0 +1,7 @@
+pre-commit:
+  parallel: true
+
+  jobs:
+    - root: web/
+      run: npx biome check --write .
+      stage_fixed: true

@@ -19,7 +19,11 @@ brew install supabase/tap/supabase
 
 ### Run Local
 
+Use Bun. Here is a [link](https://bun.com/) to easily install it. Its a very very fast Node and NPM replacement.
+
 ```
-bun db:up
+bun i
+bun dev:up
+bun migrate
 bun dev
 ```
