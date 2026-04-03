@@ -6,26 +6,19 @@ This document captures known issues and improvement directions for the Pipeline-
 
 ## Critical / high impact
 
-### 1. Drizzle migrations don’t match the app schema
+### 1. Keep Drizzle migrations in sync with `schema.ts`
 
-**Problem:** `web/lib/db/drizzle/0000_amazing_xavin.sql` only creates Better Auth tables (`user`, `session`, `account`, `verification`). It does **not** create `customers`, `orders`, `products`, `order_items`, `shipments`, or `order_predictions`, even though those are defined in `web/lib/db/schema.ts` and used across the app.
+**Status:** `0000_amazing_xavin.sql` covers Better Auth tables; `0001_shop_domain.sql` adds `customers`, `orders`, `products`, `order_items`, `shipments`, and `order_predictions`. If `schema.ts` changes, regenerate migrations from `web/` with `bunx drizzle-kit generate` and apply with `bun migrate`.
 
-**Symptom:** Running `bun migrate` can leave the database with auth tables only; queries to business tables fail or the app appears “not connected.”
-
-**Fix direction:**
-
-- From `web/`, run `bunx drizzle-kit generate` to emit a new migration for the domain tables, then run migrations again.
-- For dev-only quick sync, `drizzle-kit push` can help, but production should rely on checked-in migrations.
+**Symptom if drift returns:** Queries fail or tables are missing after a fresh migrate.
 
 ---
 
-### 2. Missing `jobs/run_inference.py`
+### 2. `jobs/run_inference.py` (late delivery batch job)
 
-**Problem:** `web/app/scoring/actions.ts` runs `python jobs/run_inference.py` with `cwd` set to the repo root (parent of `web/`). There is **no `jobs/` directory** in the repository.
+**Status:** Implemented at `jobs/run_inference.py` with `jobs/requirements.txt` (pandas, scikit-learn, psycopg, python-dotenv). Trains a small model on shipment features, upserts into `order_predictions` for unfulfilled orders.
 
-**Symptom:** “Run Scoring” always fails.
-
-**Fix direction:** Add the job script and any dependencies, or replace the action with a stub that documents the gap until the job exists.
+**Remaining constraint:** Scoring still does not run on Vercel (see item 3). Local/dev requires `pip install -r jobs/requirements.txt` before the UI button or CLI will succeed.
 
 ---
 
@@ -81,35 +74,9 @@ This document captures known issues and improvement directions for the Pipeline-
 
 ---
 
-## Deployment / operations
-
-### 8. Vercel root directory
-
-**Problem:** `package.json` for the Next app lives under `web/`. If the Vercel project’s root is the **repository root** without configuration, builds may not find the app.
-
-**Fix direction:** Set Vercel **Root Directory** to `web`, or add a root-level orchestration that builds `web`.
-
----
-
-### 9. Environment variables
-
-**Problem:** Production needs a valid **`DATABASE_URL`** (Supabase Postgres; prefer the **pooler** URI for serverless). Missing or wrong values cause connection failures.
-
-**Fix direction:** Document required vars in `.env.example`, set them in Vercel, and redeploy after changes.
-
----
-
-### 10. Postgres connections in serverless
-
-**Problem:** Many concurrent serverless instances can open many DB connections. The `postgres` client with `prepare: false` is reasonable, but connection count still matters.
-
-**Fix direction:** Use Supabase’s **transaction pooler** connection string; monitor connections and consider connection limits in Supabase dashboard.
-
----
-
 ## UX / polish
 
-### 11. Default home page
+### 8. Default home page
 
 **Problem:** `web/app/page.tsx` is still the stock Next.js starter content and doesn’t guide users to Select Customer / Dashboard.
 
@@ -117,7 +84,7 @@ This document captures known issues and improvement directions for the Pipeline-
 
 ---
 
-### 12. Priority queue `INNER JOIN` on `order_predictions`
+### 9. Priority queue `INNER JOIN` on `order_predictions`
 
 **Problem:** Unfulfilled orders **without** a row in `order_predictions` never appear in the priority list.
 
@@ -125,14 +92,12 @@ This document captures known issues and improvement directions for the Pipeline-
 
 ---
 
-## Quick checklist (Supabase + Vercel)
+## Quick checklist (remaining work)
 
-1. Create/use a hosted Supabase project; copy the Postgres connection string (pooler recommended).
-2. Set `DATABASE_URL` in Vercel for the `web` app; redeploy.
-3. Generate and apply Drizzle migrations so **all** tables from `schema.ts` exist.
-4. Seed or migrate data into Postgres (SQLite `shop.db` is not used by the Next app).
-5. Fix or remove scoring until Python inference runs in a supported environment.
-6. Add `supabase/seed.sql` or fix `config.toml` seed path.
+1. Apply Drizzle migrations on any new database so **all** tables from `schema.ts` exist.
+2. Seed or migrate data into Postgres (SQLite `shop.db` is not used by the Next app).
+3. Fix or remove scoring until Python inference runs in a supported environment.
+4. Add `supabase/seed.sql` or fix `config.toml` seed path.
 
 ---
 
@@ -169,4 +134,4 @@ SQLite `shop.db` and `web/lib/db/schema.ts` (Postgres) **do not match column-for
 
 ---
 
-*Last updated from a full-repo audit; SQLite → Supabase notes appended; adjust as fixes land.*
+*Last updated: deployment (Vercel + env) is working; Drizzle domain migration noted; deployment/ops section removed.*
