@@ -26,6 +26,14 @@ from pathlib import Path
 import psycopg
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _load_web_env() -> None:
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    load_dotenv(REPO_ROOT / "web" / ".env")
 DEFAULT_SQLITE = REPO_ROOT / "shop.db"
 
 
@@ -53,6 +61,8 @@ def main() -> None:
         help="truncate domain tables before load (keeps auth tables)",
     )
     args = parser.parse_args()
+
+    _load_web_env()
 
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:
