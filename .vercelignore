@@ -1,0 +1,12 @@
+.git/
+.next/
+node_modules/
+web/
+supabase/
+docs/
+__pycache__/
+*.py[cod]
+*.joblib
+*.sav
+shop.db
+FIXES.md
